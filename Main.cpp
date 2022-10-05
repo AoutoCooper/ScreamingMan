@@ -6,14 +6,18 @@
 #include <Windows.h>
 #include <iostream>
 #include <SDL_Mixer.h>
+#include "Timer.h"
 
-const int SCREEN_WIDTH = 720;
-const int SCREEN_HEIGHT = 480;
+const int SCREEN_WIDTH = 200;
+const int SCREEN_HEIGHT = 200;
 
+const int MAX_FRAME_RATE = 60;
 using namespace std;
- 
+
 bool Initialize();
+bool InitWindow();
 void Close();
+void FixedUpdate();
 SDL_Texture* LoadTexture(std::string file);
 bool MakeWindowTransparent(SDL_Window* window, COLORREF colorKey);
 void PlayAudio();
@@ -22,21 +26,36 @@ SDL_Window* window = NULL;
 
 SDL_Renderer* renderer = NULL;
 
-SDL_Texture* texture = NULL;
+SDL_Texture* moonSmug = NULL;
+
+SDL_Texture* moonScared = NULL;
+
+Timer* mTimer;
+
+bool scared = false;
+
+float currentTime{ 0.0 };
+float timeToBeSad{ 2.0 };
 
 int main(int argc, char* args[]) {
 
 	if (!Initialize()) {
 		printf("Could not initialize.\n");
 		return -1;
-	}	
+	}
 
-	texture = LoadTexture("skl.png");
-	if (texture == NULL) {
+	moonSmug = LoadTexture("images/moonSmug.png");
+	if (moonSmug == NULL) {
 		printf("Couldn't load image.");
 		return -1;
 	}
-	
+
+	moonScared = LoadTexture("images/moonScared.png");
+	if (moonSmug == NULL) {
+		printf("Couldn't load image.");
+		return -1;
+	}
+
 	MakeWindowTransparent(window, RGB(0, 0, 0));
 
 	bool exit = false;
@@ -49,22 +68,23 @@ int main(int argc, char* args[]) {
 
 	SDL_GetWindowSize(window, &windowWidth, &windowHeight);
 
-
 	SDL_Event e;
 
 	while (!exit) {
 
 		while (SDL_PollEvent(&e) != 0) {
+
 			if (e.type == SDL_QUIT || e.key.keysym.sym == SDLK_ESCAPE) {
 				exit = true;
 			}
 
-			if (e.type == SDL_MOUSEBUTTONUP) {
-				mouseButtonHeld = false;
-			}
-
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
 				mouseButtonHeld = true;
+			}
+
+			if (e.type == SDL_MOUSEBUTTONUP) {
+				mouseButtonHeld = false;
+				scared = true;
 				PlayAudio();
 			}
 
@@ -72,23 +92,26 @@ int main(int argc, char* args[]) {
 				SDL_GetGlobalMouseState(&mouseX, &mouseY);
 				SDL_SetWindowPosition(window, mouseX - windowWidth / 2, mouseY - windowHeight / 2);
 			}
+
+
 		}
 
-		//Clear the renderer
-		SDL_RenderClear(renderer);
-		//render thge image
-		SDL_RenderCopy(renderer, texture, NULL, NULL);
-		//show the final render
-		SDL_RenderPresent(renderer);
+		mTimer->Update();
+		//framerate independet update
+		if (mTimer->GetDeltaTime() >= 1.0f / MAX_FRAME_RATE) {
+			//render the image
+			FixedUpdate();
+			mTimer->Reset();
+		}
 	}
-	
+
 	Close();
 
 	return 0;
 }
 
 bool Initialize() {
-	
+
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		printf("SDL could not be initialized. SDL_Error: %s\n", SDL_GetError());
 		return false;
@@ -102,19 +125,53 @@ bool Initialize() {
 	window = SDL_CreateWindow("Screaming Man",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
-		700,
-		517,
+		SCREEN_WIDTH,
+		SCREEN_HEIGHT,
 		SDL_WINDOW_BORDERLESS);
-	
+
+	if (!InitWindow()) {
+		printf("Could not create window.");
+	}
+
+
+	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 1, 1024);
+
+	mTimer = Timer::Instance();
+	return true;
+}
+
+void FixedUpdate() {
+	if (scared) {
+		SDL_RenderCopy(renderer, moonScared, NULL, NULL);
+		currentTime += mTimer->GetDeltaTime();
+		
+		if (currentTime >= timeToBeSad) {
+			scared = false;
+			currentTime = 0;
+		}
+	}
+	else {
+		SDL_RenderCopy(renderer, moonSmug, NULL, NULL);
+	}
+	//show the final render
+	SDL_RenderPresent(renderer);
+
+	//Clear the renderer
+	SDL_RenderClear(renderer);
+}
+
+bool InitWindow() {
+
+	bool retflag = true;
 	SDL_SetWindowOpacity(window, 0);
 
 	if (window == NULL) {
 		printf("Window couldn't be created.SDL_Error: %s\n", SDL_GetError());
-			return false;
+		return false;
 	};
 
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-	
+
 	if (renderer == NULL) {
 		printf("Unable to create renderer. SDL Error: %s\n", SDL_GetError());
 		return false;
@@ -124,14 +181,12 @@ bool Initialize() {
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 
 	int imgFlags = IMG_INIT_PNG;
-	
+
 	if (!(IMG_Init(imgFlags) & imgFlags)) {
-		
+
 		printf("SDL image could not be initialized. SDL Error: %s\n", SDL_GetError());
 		return false;
 	}
-
-	Mix_OpenAudio(441000, MIX_DEFAULT_FORMAT, 1, 1024);
 
 	return true;
 }
@@ -144,7 +199,7 @@ void Close() {
 }
 
 SDL_Texture* LoadTexture(std::string file) {
-	
+
 	SDL_Surface* loadedSurface = IMG_Load(file.c_str());
 	SDL_Texture* newTexture = NULL;
 
@@ -153,7 +208,7 @@ SDL_Texture* LoadTexture(std::string file) {
 	}
 	else {
 		newTexture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
-		
+
 		if (newTexture == NULL) {
 			printf("Unable to crete a texture from the image. SDL Error: %s\n", SDL_GetError());
 		}
@@ -179,8 +234,8 @@ bool MakeWindowTransparent(SDL_Window* window, COLORREF colorKey) {
 }
 
 void PlayAudio() {
-	
+
 	Mix_Chunk* sound = Mix_LoadWAV("sound.wav");
-	
+
 	Mix_PlayChannel(-1, sound, 0);
 }

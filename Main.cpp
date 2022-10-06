@@ -85,6 +85,7 @@ int main(int argc, char* args[]) {
 			if (e.type == SDL_MOUSEBUTTONUP) {
 				mouseButtonHeld = false;
 				scared = true;
+				//wait for finished something, then play audio
 				PlayAudio();
 			}
 
@@ -134,7 +135,7 @@ bool Initialize() {
 	}
 
 
-	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 1, 1024);
+	Mix_OpenAudio(192000, MIX_DEFAULT_FORMAT, 1, 2048);
 
 	mTimer = Timer::Instance();
 	return true;
@@ -235,7 +236,7 @@ bool MakeWindowTransparent(SDL_Window* window, COLORREF colorKey) {
 
 void PlayAudio() {
 
-	Mix_Chunk* sound = Mix_LoadWAV("sound.wav");
+	Mix_Chunk* sound = Mix_LoadWAV("sound/sadGuitar.wav");
 
 	Mix_PlayChannel(-1, sound, 0);
 }

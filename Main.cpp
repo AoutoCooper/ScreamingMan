@@ -27,26 +27,41 @@ SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 
 
-//texture 
+//textures
 
-SDL_Texture* moonSmug = nullptr;
+SDL_Texture* normalFace = nullptr;
+SDL_Texture* initSurprised = nullptr;
+SDL_Texture* realiaiztion = nullptr;
+SDL_Texture* sadOpenEyes = nullptr;
+SDL_Texture* sadTalking = nullptr;
+SDL_Texture* sadSqueentTalking = nullptr;
+SDL_Texture* justSad = nullptr;
+SDL_Texture* talkingHappy = nullptr;
 
-SDL_Texture* moonScared = nullptr;
 
-Mix_Music* guitarFX = nullptr;
+Mix_Music* currentFX = nullptr;
 
 Timer* mTimer = nullptr;
 
-bool held = false;
+bool normal = true;
+bool bInitSurprised = false;
 bool realizing = false;
-bool sadOpenEyes = false;
-bool sadTalking = false;
-bool sadSqueentTalking = false;
-bool justSad = false;
+bool bSadOpenEyes = false;
+bool bSadTalking = false;
+bool bSadSqueentTalking = false;
+bool bJustSad = false;
+bool bTalkingHappy = false;
+bool playedGuitar = false;
+bool talkedHappily = false;
 
 
 float currentTime{ 0.0 };
-float timeToBeSad{ 2.0 };
+float timeToBeNormal{ 2.0 };
+float timeToBeTalkingHappy{ 6.0 };
+float timeToBeInitSurprised{ 5.0 };
+float timeToBeSadOpenEyes{ 3.0 };
+float timeToBeSadTalking{ 2.5 };
+float timeToBeSadSqueentTalking{ 3.95 };
 
 int main(int argc, char* args[]) {
 
@@ -55,17 +70,52 @@ int main(int argc, char* args[]) {
 		return -1;
 	}
 
-	moonSmug = LoadTexture("images/normal.png");
-	if (moonSmug == NULL) {
+	normalFace = LoadTexture("images/normal.png");
+	if (normalFace == NULL) {
+		printf("Couldn't load image.");
+		return -1;
+	}
+	talkingHappy = LoadTexture("images/talkingHappy.png");
+	if (talkingHappy == NULL) {
 		printf("Couldn't load image.");
 		return -1;
 	}
 
-	moonScared = LoadTexture("images/initSurprise.png");
-	if (moonSmug == NULL) {
+	sadTalking = LoadTexture("images/sadTalking.png");
+	if (sadTalking == NULL) {
 		printf("Couldn't load image.");
 		return -1;
 	}
+	sadSqueentTalking = LoadTexture("images/sadSqueentTalking.png");
+	if (sadSqueentTalking == NULL) {
+		printf("Couldn't load image.");
+		return -1;
+	}
+
+	initSurprised = LoadTexture("images/initSurprise.png");
+	if (initSurprised == NULL) {
+		printf("Couldn't load image.");
+		return -1;
+	}
+
+	realiaiztion = LoadTexture("images/realization.png");
+	if (realiaiztion == NULL) {
+		printf("Couldn't load image.");
+		return -1;
+	}
+
+	sadOpenEyes = LoadTexture("images/sadOpenEyes.png");
+	if (sadOpenEyes == NULL) {
+		printf("Couldn't load image.");
+		return -1;
+	}
+
+	justSad = LoadTexture("images/justSad.png");
+	if (justSad == NULL) {
+		printf("Couldn't load image.");
+		return -1;
+	}
+
 
 	MakeWindowTransparent(window, RGB(0, 255, 0));
 
@@ -91,14 +141,20 @@ int main(int argc, char* args[]) {
 			}
 
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
+				normal = false;
+				if (!bInitSurprised) {
+					bInitSurprised = true;
+				}
+				//then realization 
 				mouseButtonHeld = true;
 			}
 
 			if (e.type == SDL_MOUSEBUTTONUP) {
 				mouseButtonHeld = false;
-				held = true;
-				//wait for finished something, then play audio
-				PlayAudio("sound/sadGuitar.wav");
+				realizing = false;
+				if (!bSadOpenEyes) {
+					bSadOpenEyes = true;
+				}
 			}
 
 			if (mouseButtonHeld) {
@@ -124,6 +180,8 @@ int main(int argc, char* args[]) {
 }
 
 bool Initialize() {
+
+	currentTime = 0;
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		printf("SDL could not be initialized. SDL_Error: %s\n", SDL_GetError());
@@ -157,18 +215,100 @@ bool Initialize() {
 }
 
 void FixedUpdate() {
-	if (held) {
-		SDL_RenderCopy(renderer, moonScared, NULL, NULL);
+
+	//cout << "init surprised: " << bInitSurprised << endl;
+	//cout << "realizing: " << realizing << endl;
+	//cout << "normal: " << normal << endl;
+	if (normal) {
+		SDL_RenderCopy(renderer, normalFace, NULL, NULL);
 		currentTime += mTimer->GetDeltaTime();
 		
-		if (currentTime >= timeToBeSad) {
-			held = false;
+		if (!talkedHappily) {
+			if (currentTime >= timeToBeNormal) {
+				normal = false;
+				currentTime = 0;
+				bTalkingHappy = true;
+			}
+		}
+		
+	}
+
+	if (bTalkingHappy) {
+		SDL_RenderCopy(renderer, talkingHappy, NULL, NULL);
+		currentTime += mTimer->GetDeltaTime();
+		PlayAudio("sound/happy.wav");
+
+		if (currentTime >= timeToBeTalkingHappy) {
+			bTalkingHappy = false;
 			currentTime = 0;
+			talkedHappily = true;
+			normal = true;
 		}
 	}
-	else {
-		SDL_RenderCopy(renderer, moonSmug, NULL, NULL);
+
+	if (bInitSurprised) {
+		SDL_RenderCopy(renderer, initSurprised, NULL, NULL);
+		currentTime += mTimer->GetDeltaTime();
+
+		if (currentTime >= timeToBeInitSurprised) {
+			bInitSurprised = false;
+			currentTime = 0;
+			realizing = true;
+		}
 	}
+
+	if (realizing) {
+		SDL_RenderCopy(renderer, realiaiztion, NULL, NULL);
+		currentTime = 0;
+		//this stays like this until mouse gets held up
+	}
+	
+
+	if (bSadOpenEyes) {
+		SDL_RenderCopy(renderer, sadOpenEyes, NULL, NULL);
+
+		currentTime += mTimer->GetDeltaTime();
+		if (currentTime >= timeToBeSadOpenEyes) {
+			bSadOpenEyes = false;
+			currentTime = 0;
+			bSadTalking = true;
+			PlayAudio("sound/sad.wav");
+			//start audio talking
+		}
+	}
+	if (bSadTalking) {
+		SDL_RenderCopy(renderer, sadTalking, NULL, NULL);
+
+		currentTime += mTimer->GetDeltaTime();
+		if (currentTime >= timeToBeSadTalking) {
+			bSadTalking = false;
+			currentTime = 0;
+			bSadSqueentTalking = true;
+			//start audio talking
+		}
+
+	}
+	if (bSadSqueentTalking) {
+		SDL_RenderCopy(renderer, sadSqueentTalking, NULL, NULL);
+		currentTime += mTimer->GetDeltaTime();
+
+		if (currentTime >= timeToBeSadSqueentTalking) {
+			bSadSqueentTalking = false;
+			currentTime = 0;
+			bJustSad = true;
+		}
+
+	}
+	if (bJustSad) {
+		SDL_RenderCopy(renderer, justSad, NULL, NULL);
+		
+		if (!playedGuitar) {
+ 			PlayAudio("sound/sadGuitar.wav");
+			playedGuitar = true;
+		}
+	}
+
+
 	//show the final render
 	SDL_RenderPresent(renderer);
 
@@ -208,21 +348,35 @@ bool InitWindow() {
 }
 
 void Close() {
-	
+
 	SDL_DestroyWindow(window);
-	SDL_DestroyTexture(moonScared);
-	SDL_DestroyTexture(moonSmug);
+	SDL_DestroyTexture(initSurprised);
+	SDL_DestroyTexture(realiaiztion);
+	SDL_DestroyTexture(normalFace);
+	SDL_DestroyTexture(sadTalking);
+	SDL_DestroyTexture(sadOpenEyes);
+	SDL_DestroyTexture(sadSqueentTalking);
+	SDL_DestroyTexture(justSad);
+	SDL_DestroyTexture(talkingHappy);
 	SDL_DestroyRenderer(renderer);
 
-	Mix_FreeMusic(guitarFX);
-
-	window = nullptr;
 	renderer = nullptr;
-	moonSmug = nullptr;
-	moonScared = nullptr;
-	mTimer = nullptr;
+	window = nullptr;
+	normalFace = nullptr;
+	talkingHappy = nullptr;
+	initSurprised = nullptr;
+	realiaiztion = nullptr;
+	sadOpenEyes = nullptr;
+	sadTalking = nullptr;
+	sadSqueentTalking = nullptr;
+	justSad = nullptr;
 
-	guitarFX = nullptr;
+
+	Mix_FreeMusic(currentFX);
+
+	currentFX = nullptr;
+
+	mTimer = nullptr;
 
 	Mix_Quit();
 
@@ -252,6 +406,14 @@ SDL_Texture* LoadTexture(std::string file) {
 	return newTexture;
 }
 
+void PlayAudio(std::string file) {
+
+	if (!Mix_PlayingMusic()) {
+		currentFX = Mix_LoadMUS(file.c_str());
+		Mix_PlayMusic(currentFX, 0);
+	}
+}
+
 bool MakeWindowTransparent(SDL_Window* window, COLORREF colorKey) {
 	// Get window handle (https://stackoverflow.com/a/24118145/3357935)
 	SDL_SysWMinfo wmInfo;
@@ -266,10 +428,3 @@ bool MakeWindowTransparent(SDL_Window* window, COLORREF colorKey) {
 	return SetLayeredWindowAttributes(hWnd, colorKey, 0, LWA_COLORKEY);
 }
 
-void PlayAudio(std::string file) {
-
-	if (!Mix_PlayingMusic()) {
-		guitarFX = Mix_LoadMUS(file.c_str());
-		Mix_PlayMusic(guitarFX, 0);
-	}
-}

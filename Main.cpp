@@ -20,17 +20,19 @@ void Close();
 void FixedUpdate();
 SDL_Texture* LoadTexture(std::string file);
 bool MakeWindowTransparent(SDL_Window* window, COLORREF colorKey);
-void PlayAudio();
+void PlayAudio(string file);
 
-SDL_Window* window = NULL;
+SDL_Window* window = nullptr;
 
-SDL_Renderer* renderer = NULL;
+SDL_Renderer* renderer = nullptr;
 
-SDL_Texture* moonSmug = NULL;
+SDL_Texture* moonSmug = nullptr;
 
-SDL_Texture* moonScared = NULL;
+SDL_Texture* moonScared = nullptr;
 
-Timer* mTimer;
+Mix_Music* guitarFX = nullptr;
+
+Timer* mTimer = nullptr;
 
 bool scared = false;
 
@@ -59,6 +61,7 @@ int main(int argc, char* args[]) {
 	MakeWindowTransparent(window, RGB(0, 0, 0));
 
 	bool exit = false;
+
 	bool mouseButtonHeld = false;
 	int mouseX{ 0 };
 	int mouseY{ 0 };
@@ -74,7 +77,7 @@ int main(int argc, char* args[]) {
 
 		while (SDL_PollEvent(&e) != 0) {
 
-			if (e.type == SDL_QUIT || e.key.keysym.sym == SDLK_ESCAPE) {
+			if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
 				exit = true;
 			}
 
@@ -86,7 +89,7 @@ int main(int argc, char* args[]) {
 				mouseButtonHeld = false;
 				scared = true;
 				//wait for finished something, then play audio
-				PlayAudio();
+				PlayAudio("sound/sadGuitar.wav");
 			}
 
 			if (mouseButtonHeld) {
@@ -135,7 +138,10 @@ bool Initialize() {
 	}
 
 
-	Mix_OpenAudio(192000, MIX_DEFAULT_FORMAT, 1, 2048);
+	if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 1, 2048) < 0) {
+		printf("Audio could not be opened. SDL_Error: %s\n", SDL_GetError());
+	}
+
 
 	mTimer = Timer::Instance();
 	return true;
@@ -193,8 +199,25 @@ bool InitWindow() {
 }
 
 void Close() {
+	
 	SDL_DestroyWindow(window);
-	window = NULL;
+	SDL_DestroyTexture(moonScared);
+	SDL_DestroyTexture(moonSmug);
+	SDL_DestroyRenderer(renderer);
+
+	Mix_FreeMusic(guitarFX);
+
+	window = nullptr;
+	renderer = nullptr;
+	moonSmug = nullptr;
+	moonScared = nullptr;
+	mTimer = nullptr;
+
+	guitarFX = nullptr;
+
+	Mix_Quit();
+
+	IMG_Quit();
 
 	SDL_Quit();
 }
@@ -234,9 +257,10 @@ bool MakeWindowTransparent(SDL_Window* window, COLORREF colorKey) {
 	return SetLayeredWindowAttributes(hWnd, colorKey, 0, LWA_COLORKEY);
 }
 
-void PlayAudio() {
+void PlayAudio(std::string file) {
 
-	Mix_Chunk* sound = Mix_LoadWAV("sound/sadGuitar.wav");
-
-	Mix_PlayChannel(-1, sound, 0);
+	if (!Mix_PlayingMusic()) {
+		guitarFX = Mix_LoadMUS(file.c_str());
+		Mix_PlayMusic(guitarFX, 0);
+	}
 }

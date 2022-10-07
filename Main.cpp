@@ -26,6 +26,9 @@ SDL_Window* window = nullptr;
 
 SDL_Renderer* renderer = nullptr;
 
+
+//texture 
+
 SDL_Texture* moonSmug = nullptr;
 
 SDL_Texture* moonScared = nullptr;
@@ -34,7 +37,13 @@ Mix_Music* guitarFX = nullptr;
 
 Timer* mTimer = nullptr;
 
-bool scared = false;
+bool held = false;
+bool realizing = false;
+bool sadOpenEyes = false;
+bool sadTalking = false;
+bool sadSqueentTalking = false;
+bool justSad = false;
+
 
 float currentTime{ 0.0 };
 float timeToBeSad{ 2.0 };
@@ -46,19 +55,19 @@ int main(int argc, char* args[]) {
 		return -1;
 	}
 
-	moonSmug = LoadTexture("images/moonSmug.png");
+	moonSmug = LoadTexture("images/normal.png");
 	if (moonSmug == NULL) {
 		printf("Couldn't load image.");
 		return -1;
 	}
 
-	moonScared = LoadTexture("images/moonScared.png");
+	moonScared = LoadTexture("images/initSurprise.png");
 	if (moonSmug == NULL) {
 		printf("Couldn't load image.");
 		return -1;
 	}
 
-	MakeWindowTransparent(window, RGB(0, 0, 0));
+	MakeWindowTransparent(window, RGB(0, 255, 0));
 
 	bool exit = false;
 
@@ -87,7 +96,7 @@ int main(int argc, char* args[]) {
 
 			if (e.type == SDL_MOUSEBUTTONUP) {
 				mouseButtonHeld = false;
-				scared = true;
+				held = true;
 				//wait for finished something, then play audio
 				PlayAudio("sound/sadGuitar.wav");
 			}
@@ -148,12 +157,12 @@ bool Initialize() {
 }
 
 void FixedUpdate() {
-	if (scared) {
+	if (held) {
 		SDL_RenderCopy(renderer, moonScared, NULL, NULL);
 		currentTime += mTimer->GetDeltaTime();
 		
 		if (currentTime >= timeToBeSad) {
-			scared = false;
+			held = false;
 			currentTime = 0;
 		}
 	}
@@ -185,7 +194,7 @@ bool InitWindow() {
 	}
 
 	//Chroma key logic. Everything that's blcak becaomes transparent.
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 0);
 
 	int imgFlags = IMG_INIT_PNG;
 
